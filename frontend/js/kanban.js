@@ -154,6 +154,8 @@ async function deleteTask() {
 async function showMembers() {
   const panel = document.getElementById('membersPanel');
   const list = document.getElementById('membersList');
+  const isOwner = members.find(m => m.is_owner && m.email === user?.email);
+
   list.innerHTML = members.map(m => `
     <div class="flex items-center gap-3 py-2 border-b">
       <div class="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center text-sm font-bold">
@@ -165,7 +167,36 @@ async function showMembers() {
       </div>
     </div>
   `).join('');
+
+  if (isOwner) {
+    const team = await api.get(`/teams/${teamId}`);
+    list.innerHTML += `
+      <div class="mt-4 pt-4 border-t">
+        <p class="text-xs text-gray-500 mb-2">초대코드</p>
+        <div class="flex items-center gap-2 mb-3">
+          <span id="currentInviteCode" class="font-mono font-bold text-teal-600 tracking-widest border border-teal-200 rounded px-3 py-1 bg-teal-50">${escHtml(team.invite_code)}</span>
+          <button onclick="copyInviteCode()" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">📋 복사</button>
+        </div>
+        <button onclick="regenerateInviteCode()" class="w-full text-sm border border-orange-300 text-orange-600 hover:bg-orange-50 rounded py-1.5 transition">🔄 초대코드 재발급</button>
+      </div>
+    `;
+  }
   panel.classList.remove('hidden');
+}
+
+async function copyInviteCode() {
+  const code = document.getElementById('currentInviteCode')?.textContent;
+  if (code) navigator.clipboard.writeText(code).then(() => alert('복사됨: ' + code));
+}
+
+async function regenerateInviteCode() {
+  if (!confirm('초대코드를 재발급하면 기존 코드는 즉시 무효화됩니다.\n계속하시겠습니까?')) return;
+  try {
+    const data = await api.post(`/teams/${teamId}/invite-code`);
+    const codeEl = document.getElementById('currentInviteCode');
+    if (codeEl) codeEl.textContent = data.invite_code;
+    alert('새 초대코드: ' + data.invite_code);
+  } catch (err) { alert(err.data?.error?.message || '재발급 실패'); }
 }
 function closeMembers() { document.getElementById('membersPanel').classList.add('hidden'); }
 

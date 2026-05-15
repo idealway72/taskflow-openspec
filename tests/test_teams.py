@@ -71,3 +71,36 @@ def test_leave_team_owner_cannot_leave(client, team_with_auth):
     res = client.delete(f"/api/teams/{team_id}/leave", headers=team_with_auth["headers"])
     assert res.status_code == 400
     assert res.json()["error"]["code"] == "OWNER_CANNOT_LEAVE"
+
+
+def test_regenerate_invite_code_owner(client, team_with_auth):
+    team_id = team_with_auth["team"]["id"]
+    old_code = team_with_auth["team"]["invite_code"]
+    res = client.post(f"/api/teams/{team_id}/invite-code", headers=team_with_auth["headers"])
+    assert res.status_code == 200
+    new_code = res.json()["invite_code"]
+    assert new_code != old_code
+    import re
+    assert re.match(r"^[A-Z]{4}-[0-9]{4}$", new_code)
+
+
+def test_regenerate_invite_code_member_forbidden(client, team_with_auth):
+    team_id = team_with_auth["team"]["id"]
+    invite_code = team_with_auth["team"]["invite_code"]
+    res2 = client.post("/api/auth/signup", json={"email": "member2@example.com", "password": "password123"})
+    token2 = res2.json()["token"]
+    client.post("/api/teams/join", json={"invite_code": invite_code}, headers={"Authorization": f"Bearer {token2}"})
+    res = client.post(f"/api/teams/{team_id}/invite-code", headers={"Authorization": f"Bearer {token2}"})
+    assert res.status_code == 403
+    assert res.json()["error"]["code"] == "FORBIDDEN"
+
+
+def test_regenerate_invite_code_old_code_invalid(client, team_with_auth):
+    team_id = team_with_auth["team"]["id"]
+    old_code = team_with_auth["team"]["invite_code"]
+    client.post(f"/api/teams/{team_id}/invite-code", headers=team_with_auth["headers"])
+    res3 = client.post("/api/auth/signup", json={"email": "newmember@example.com", "password": "password123"})
+    token3 = res3.json()["token"]
+    res = client.post("/api/teams/join", json={"invite_code": old_code}, headers={"Authorization": f"Bearer {token3}"})
+    assert res.status_code == 404
+    assert res.json()["error"]["code"] == "NOT_FOUND"

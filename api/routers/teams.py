@@ -89,6 +89,26 @@ def get_members(
     ]
 
 
+@router.post("/{team_id}/invite-code")
+def regenerate_invite_code(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    auth.require_team_member(team_id, current_user)
+    team = db.query(models.Team).filter(models.Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail={"error": {"code": "NOT_FOUND", "message": "해당 항목을 찾을 수 없습니다"}})
+    if team.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": {"code": "FORBIDDEN", "message": "팀 owner만 초대코드를 재발급할 수 있습니다"}},
+        )
+    team.invite_code = _generate_invite_code(db)
+    db.commit()
+    return {"invite_code": team.invite_code}
+
+
 @router.delete("/{team_id}/leave")
 def leave_team(
     team_id: int,
