@@ -40,7 +40,8 @@ async function loadMessages(initial = false) {
 function appendMessage(msg) {
   const container = document.getElementById('messages');
   const isMe = msg.user_id === user?.id;
-  const time = new Date(msg.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  const d = new Date(msg.created_at);
+  const time = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   const div = document.createElement('div');
   div.dataset.id = msg.id;
   div.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;

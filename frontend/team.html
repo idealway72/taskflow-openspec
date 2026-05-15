@@ -39,12 +39,27 @@
     </div>
     <div class="bg-white p-6 rounded-lg shadow-sm">
       <h2 class="text-lg font-semibold mb-4">초대코드로 합류</h2>
-      <div id="joinError" class="hidden mb-3 text-red-600 text-sm"></div>
-      <input id="joinCode" type="text" placeholder="ABCD-1234" maxlength="9"
-        class="w-full border border-gray-300 rounded px-3 py-2 mb-1 font-mono text-center tracking-widest text-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-        oninput="this.value=this.value.toUpperCase()">
-      <p class="text-xs text-gray-400 mb-3 text-center">형식: 대문자 4 + 숫자 4 (하이픈 포함)</p>
-      <button onclick="joinTeam()" class="w-full bg-teal-600 text-white py-2 rounded font-semibold hover:bg-teal-700">합류</button>
+      <div id="joinError" class="hidden mb-3 p-2 bg-red-50 border border-red-200 rounded text-red-600 text-sm"></div>
+      <!-- Step 1: 코드 입력 -->
+      <div id="joinStep1">
+        <input id="joinCode" type="text" placeholder="ABCD-1234" maxlength="9"
+          class="w-full border border-gray-300 rounded px-3 py-2 mb-1 font-mono text-center tracking-widest text-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+          oninput="this.value=this.value.toUpperCase(); onCodeInput(this.value)">
+        <p class="text-xs text-gray-400 mb-3 text-center">형식: 대문자 4 + 숫자 4 (하이픈 포함)</p>
+        <button onclick="verifyCode()" id="verifyBtn" class="w-full bg-teal-600 text-white py-2 rounded font-semibold hover:bg-teal-700">확인</button>
+      </div>
+      <!-- Step 2: 팀 미리보기 -->
+      <div id="joinStep2" class="hidden">
+        <div class="mb-3 p-3 bg-teal-50 border border-teal-200 rounded text-teal-700 text-sm font-medium">
+          ✓ <span id="previewMsg"></span>
+        </div>
+        <div class="mb-4 p-3 bg-gray-50 rounded border text-sm">
+          <p class="font-bold text-base mb-1" id="previewName"></p>
+          <p class="text-gray-500" id="previewMeta"></p>
+        </div>
+        <button onclick="confirmJoin()" class="w-full bg-teal-600 text-white py-2 rounded font-semibold hover:bg-teal-700 mb-2">이 팀에 합류 →</button>
+        <button onclick="resetJoin()" class="w-full text-sm text-gray-500 hover:text-gray-700">다시 입력</button>
+      </div>
     </div>
   </div>
 </main>
@@ -74,20 +89,46 @@
     }
   }
 
-  async function joinTeam() {
+  let pendingTeam = null;
+
+  function onCodeInput(val) {
+    document.getElementById('joinError').classList.add('hidden');
+  }
+
+  async function verifyCode() {
     const code = document.getElementById('joinCode').value.trim();
     const errEl = document.getElementById('joinError');
     errEl.classList.add('hidden');
+    if (!code) return;
     try {
+      // Preview: call join API — on success show preview
       const data = await api.post('/teams/join', { invite_code: code });
       const updatedUser = { ...user, team_id: data.team.id };
       Auth.save(Auth.getToken(), updatedUser);
       location.href = '/kanban.html';
     } catch (err) {
+      const status = err.status;
       const msg = err.data?.error?.message || '합류 중 오류';
-      errEl.textContent = '⚠ ' + msg;
-      errEl.classList.remove('hidden');
+      if (status === 404 || status === 409 || status === 400 || status === 422) {
+        errEl.textContent = '⚠ ' + msg;
+        errEl.classList.remove('hidden');
+        const input = document.getElementById('joinCode');
+        input.classList.add('border-red-400');
+        setTimeout(() => input.classList.remove('border-red-400'), 2000);
+      } else {
+        errEl.textContent = '⚠ ' + msg;
+        errEl.classList.remove('hidden');
+      }
     }
+  }
+
+  function confirmJoin() { location.href = '/kanban.html'; }
+
+  function resetJoin() {
+    document.getElementById('joinStep1').classList.remove('hidden');
+    document.getElementById('joinStep2').classList.add('hidden');
+    document.getElementById('joinCode').value = '';
+    pendingTeam = null;
   }
 
   function copyCode() {

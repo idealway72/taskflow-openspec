@@ -73,6 +73,13 @@ function startAdd(col) {
   ['TODO', 'DOING', 'DONE'].forEach(s => document.getElementById(`add-${s}`).classList.add('hidden'));
   document.getElementById(`add-${col}`).classList.remove('hidden');
   document.getElementById(`add-input-${col}`).focus();
+  // 담당자 select 옵션 채우기
+  const sel = document.getElementById(`add-assignee-${col}`);
+  if (sel && sel.options.length <= 1) {
+    sel.innerHTML = `<option value="me">@me</option>` +
+      members.map(m => `<option value="${m.id}">${m.email.split('@')[0]}</option>`).join('') +
+      `<option value="null">미할당</option>`;
+  }
 }
 
 async function handleAddKey(e, col) {
@@ -80,8 +87,11 @@ async function handleAddKey(e, col) {
   if (e.key !== 'Enter') return;
   const title = document.getElementById(`add-input-${col}`).value.trim();
   if (!title) return;
+  const sel = document.getElementById(`add-assignee-${col}`);
+  const selVal = sel?.value;
+  const assignee_id = selVal === 'me' ? user?.id : (selVal === 'null' ? null : (parseInt(selVal) || null));
   try {
-    await api.post(`/teams/${teamId}/tasks`, { title });
+    await api.post(`/teams/${teamId}/tasks`, { title, assignee_id });
     document.getElementById(`add-input-${col}`).value = '';
     document.getElementById(`add-${col}`).classList.add('hidden');
     await loadTasks();
