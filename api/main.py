@@ -66,11 +66,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    import traceback
-    tb = traceback.format_exc()
     return JSONResponse(
         status_code=500,
-        content={"error": {"code": "INTERNAL_ERROR", "message": str(exc), "trace": tb[-500:]}},
+        content={"error": {"code": "INTERNAL_ERROR", "message": "서버 오류가 발생했습니다"}},
     )
 
 
