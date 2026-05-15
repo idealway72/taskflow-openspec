@@ -12,7 +12,11 @@ from api.routers import auth, teams, tasks, messages
 
 load_dotenv()
 
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as _e:
+    import logging
+    logging.warning(f"create_all skipped: {_e}")
 
 app = FastAPI(
     title="TaskFlow API",
