@@ -1,4 +1,5 @@
 def test_create_task(client, team_with_auth):
+    """태스크 생성 성공 — 제목 입력 → 201 + status=TODO"""
     team_id = team_with_auth["team"]["id"]
     res = client.post(f"/api/teams/{team_id}/tasks", json={"title": "Test Task"}, headers=team_with_auth["headers"])
     assert res.status_code == 201
@@ -9,12 +10,14 @@ def test_create_task(client, team_with_auth):
 
 
 def test_create_task_invalid_title(client, team_with_auth):
+    """태스크 생성 실패 — 빈 제목 → 422 VALIDATION_ERROR"""
     team_id = team_with_auth["team"]["id"]
     res = client.post(f"/api/teams/{team_id}/tasks", json={"title": ""}, headers=team_with_auth["headers"])
     assert res.status_code == 422
 
 
 def test_list_tasks(client, team_with_auth):
+    """태스크 목록 조회 — 2개 생성 후 전체 조회 → 2건 반환"""
     team_id = team_with_auth["team"]["id"]
     client.post(f"/api/teams/{team_id}/tasks", json={"title": "Task 1"}, headers=team_with_auth["headers"])
     client.post(f"/api/teams/{team_id}/tasks", json={"title": "Task 2"}, headers=team_with_auth["headers"])
@@ -24,6 +27,7 @@ def test_list_tasks(client, team_with_auth):
 
 
 def test_get_task(client, team_with_auth):
+    """태스크 단일 조회 — 생성 후 id로 조회 → 200 + 동일 데이터"""
     team_id = team_with_auth["team"]["id"]
     created = client.post(f"/api/teams/{team_id}/tasks", json={"title": "Task"}, headers=team_with_auth["headers"]).json()
     res = client.get(f"/api/tasks/{created['id']}", headers=team_with_auth["headers"])
@@ -32,6 +36,7 @@ def test_get_task(client, team_with_auth):
 
 
 def test_update_task(client, team_with_auth):
+    """태스크 제목 수정 — PUT → 200 + 새 제목 반영"""
     team_id = team_with_auth["team"]["id"]
     created = client.post(f"/api/teams/{team_id}/tasks", json={"title": "Old Title"}, headers=team_with_auth["headers"]).json()
     res = client.put(f"/api/tasks/{created['id']}", json={"title": "New Title"}, headers=team_with_auth["headers"])
@@ -40,6 +45,7 @@ def test_update_task(client, team_with_auth):
 
 
 def test_update_task_status(client, team_with_auth):
+    """태스크 상태 변경 — TODO → DOING PATCH → 200 + status 반영"""
     team_id = team_with_auth["team"]["id"]
     created = client.post(f"/api/teams/{team_id}/tasks", json={"title": "Task"}, headers=team_with_auth["headers"]).json()
     res = client.patch(f"/api/tasks/{created['id']}/status", json={"status": "DOING"}, headers=team_with_auth["headers"])
@@ -48,6 +54,7 @@ def test_update_task_status(client, team_with_auth):
 
 
 def test_update_task_invalid_status(client, team_with_auth):
+    """태스크 상태 변경 실패 — 유효하지 않은 상태값 → 422 VALIDATION_ERROR"""
     team_id = team_with_auth["team"]["id"]
     created = client.post(f"/api/teams/{team_id}/tasks", json={"title": "Task"}, headers=team_with_auth["headers"]).json()
     res = client.patch(f"/api/tasks/{created['id']}/status", json={"status": "IN_PROGRESS"}, headers=team_with_auth["headers"])
@@ -55,6 +62,7 @@ def test_update_task_invalid_status(client, team_with_auth):
 
 
 def test_delete_task_by_creator(client, team_with_auth):
+    """태스크 삭제 성공 — 생성자가 삭제 → 204"""
     team_id = team_with_auth["team"]["id"]
     created = client.post(f"/api/teams/{team_id}/tasks", json={"title": "Task"}, headers=team_with_auth["headers"]).json()
     res = client.delete(f"/api/tasks/{created['id']}", headers=team_with_auth["headers"])
@@ -62,6 +70,7 @@ def test_delete_task_by_creator(client, team_with_auth):
 
 
 def test_delete_task_forbidden(client, team_with_auth):
+    """태스크 삭제 실패 — 생성자·owner 아닌 멤버 → 403 FORBIDDEN"""
     team_id = team_with_auth["team"]["id"]
     invite_code = team_with_auth["team"]["invite_code"]
     created = client.post(f"/api/teams/{team_id}/tasks", json={"title": "Task"}, headers=team_with_auth["headers"]).json()
@@ -74,6 +83,7 @@ def test_delete_task_forbidden(client, team_with_auth):
 
 
 def test_filter_my_tasks(client, team_with_auth):
+    """태스크 필터(@me) — assignee=나인 태스크만 반환"""
     team_id = team_with_auth["team"]["id"]
     user_id = team_with_auth["user"]["user"]["id"]
     client.post(f"/api/teams/{team_id}/tasks", json={"title": "My Task", "assignee_id": user_id}, headers=team_with_auth["headers"])
