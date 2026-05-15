@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Content *)",
+      "mcp__openspec__openspec_get_instructions",
+      "PowerShell(npx openspec --version 2>&1; npx openspec init --help 2>&1)",
+      "PowerShell(cmd /c \"dir /a D:\\\\taskflow-openspec\")",
+      "PowerShell(cmd /c \"dir /a /s D:\\\\taskflow-openspec\")",
+      "mcp__openspec__openspec_list_changes",
+      "PowerShell(cmd /c \"dir /a /s D:\\\\taskflow-openspec\\\\openspec\")"
+    ]
+  }
+}

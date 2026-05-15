@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow — 칸반</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .card-dragging { opacity: 0.4; }
+    .col-dragover { background-color: #e0f2fe !important; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<header class="bg-white shadow-sm px-4 py-3 flex items-center justify-between">
+  <div class="flex items-center gap-4">
+    <span class="bg-teal-600 text-white font-bold px-3 py-1 rounded">TaskFlow</span>
+    <span id="teamName" class="font-semibold text-gray-700 hidden md:inline"></span>
+  </div>
+  <nav class="flex gap-1">
+    <button onclick="location.href='/kanban.html'" class="px-3 py-1 bg-teal-600 text-white rounded text-sm font-semibold">칸반</button>
+    <button onclick="location.href='/chat.html'" class="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded text-sm">채팅</button>
+    <button onclick="showMembers()" class="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded text-sm">멤버</button>
+  </nav>
+  <div class="flex items-center gap-3">
+    <span id="userEmail" class="text-xs text-gray-500 hidden md:inline"></span>
+    <button onclick="logout()" class="text-sm text-gray-400 hover:text-gray-700">로그아웃</button>
+  </div>
+</header>
+
+<!-- 필터 바 -->
+<div class="bg-white border-b px-4 py-2 flex items-center gap-2 flex-wrap">
+  <button onclick="setFilter('all')" id="f-all" class="filter-btn px-3 py-1 rounded text-sm font-medium bg-gray-800 text-white">전체</button>
+  <button onclick="setFilter('me')" id="f-me" class="filter-btn px-3 py-1 rounded text-sm font-medium text-gray-600 hover:bg-gray-100">@me</button>
+  <button onclick="setFilter('unassigned')" id="f-unassigned" class="filter-btn px-3 py-1 rounded text-sm font-medium text-gray-600 hover:bg-gray-100">미할당</button>
+  <span class="ml-auto text-xs text-gray-400">정렬: 최근 생성순</span>
+</div>
+
+<!-- 모바일 탭 -->
+<div class="md:hidden flex border-b bg-white">
+  <button onclick="showCol('TODO')" id="tab-TODO" class="flex-1 py-2 text-sm font-medium text-teal-600 border-b-2 border-teal-600">TODO</button>
+  <button onclick="showCol('DOING')" id="tab-DOING" class="flex-1 py-2 text-sm font-medium text-gray-500">DOING</button>
+  <button onclick="showCol('DONE')" id="tab-DONE" class="flex-1 py-2 text-sm font-medium text-gray-500">DONE</button>
+</div>
+
+<!-- 칸반 보드 -->
+<main class="p-4 md:grid md:grid-cols-3 md:gap-4 max-w-7xl mx-auto">
+  <div id="col-TODO" class="kanban-col mb-4 md:mb-0 bg-yellow-50 rounded-lg p-3">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-bold text-yellow-700">TODO · <span id="cnt-TODO">0</span></h2>
+      <button onclick="startAdd('TODO')" class="text-yellow-600 hover:text-yellow-800 text-xl leading-none">+</button>
+    </div>
+    <div id="add-TODO" class="hidden mb-2 bg-white border-2 border-teal-400 rounded p-2">
+      <input id="add-input-TODO" type="text" placeholder="태스크 제목..." maxlength="100"
+        class="w-full text-sm outline-none mb-1" onkeydown="handleAddKey(event,'TODO')">
+      <p class="text-xs text-gray-400">Enter: 저장 · Esc: 취소</p>
+    </div>
+    <div id="cards-TODO" class="space-y-2 min-h-[60px]"
+      ondragover="event.preventDefault();this.closest('.kanban-col').classList.add('col-dragover')"
+      ondragleave="this.closest('.kanban-col').classList.remove('col-dragover')"
+      ondrop="drop(event,'TODO')"></div>
+  </div>
+  <div id="col-DOING" class="kanban-col mb-4 md:mb-0 bg-blue-50 rounded-lg p-3 hidden md:block">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-bold text-blue-700">DOING · <span id="cnt-DOING">0</span></h2>
+      <button onclick="startAdd('DOING')" class="text-blue-600 hover:text-blue-800 text-xl leading-none">+</button>
+    </div>
+    <div id="add-DOING" class="hidden mb-2 bg-white border-2 border-teal-400 rounded p-2">
+      <input id="add-input-DOING" type="text" placeholder="태스크 제목..." maxlength="100"
+        class="w-full text-sm outline-none mb-1" onkeydown="handleAddKey(event,'DOING')">
+      <p class="text-xs text-gray-400">Enter: 저장 · Esc: 취소</p>
+    </div>
+    <div id="cards-DOING" class="space-y-2 min-h-[60px]"
+      ondragover="event.preventDefault();this.closest('.kanban-col').classList.add('col-dragover')"
+      ondragleave="this.closest('.kanban-col').classList.remove('col-dragover')"
+      ondrop="drop(event,'DOING')"></div>
+  </div>
+  <div id="col-DONE" class="kanban-col bg-green-50 rounded-lg p-3 hidden md:block">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-bold text-green-700">DONE · <span id="cnt-DONE">0</span></h2>
+      <button onclick="startAdd('DONE')" class="text-green-600 hover:text-green-800 text-xl leading-none">+</button>
+    </div>
+    <div id="add-DONE" class="hidden mb-2 bg-white border-2 border-teal-400 rounded p-2">
+      <input id="add-input-DONE" type="text" placeholder="태스크 제목..." maxlength="100"
+        class="w-full text-sm outline-none mb-1" onkeydown="handleAddKey(event,'DONE')">
+      <p class="text-xs text-gray-400">Enter: 저장 · Esc: 취소</p>
+    </div>
+    <div id="cards-DONE" class="space-y-2 min-h-[60px]"
+      ondragover="event.preventDefault();this.closest('.kanban-col').classList.add('col-dragover')"
+      ondragleave="this.closest('.kanban-col').classList.remove('col-dragover')"
+      ondrop="drop(event,'DONE')"></div>
+  </div>
+</main>
+
+<!-- 멤버 사이드패널 -->
+<div id="membersPanel" class="hidden fixed inset-0 bg-black/40 z-40" onclick="closeMembers()">
+  <div class="absolute right-0 top-0 h-full w-72 bg-white shadow-xl p-6" onclick="event.stopPropagation()">
+    <h2 class="text-lg font-semibold mb-4">팀 멤버</h2>
+    <div id="membersList"></div>
+    <button onclick="closeMembers()" class="mt-6 w-full text-sm text-gray-500 hover:text-gray-800">닫기</button>
+  </div>
+</div>
+
+<!-- 카드 수정 모달 -->
+<div id="modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+  <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <span id="modal-id" class="text-gray-400 text-sm"></span>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-gray-700 text-xl">✕</button>
+    </div>
+    <input id="modal-title" type="text" maxlength="100"
+      class="w-full text-lg font-semibold border-b border-gray-200 pb-2 mb-4 focus:outline-none focus:border-teal-500">
+    <div class="mb-4">
+      <p class="text-sm text-gray-500 mb-2">상태</p>
+      <div class="flex gap-2">
+        <button onclick="setModalStatus('TODO')" id="ms-TODO" class="modal-status px-3 py-1 rounded border text-sm">TODO</button>
+        <button onclick="setModalStatus('DOING')" id="ms-DOING" class="modal-status px-3 py-1 rounded border text-sm">DOING</button>
+        <button onclick="setModalStatus('DONE')" id="ms-DONE" class="modal-status px-3 py-1 rounded border text-sm">DONE</button>
+      </div>
+    </div>
+    <div class="mb-4 text-sm text-gray-500">
+      <p>담당자: <span id="modal-assignee">-</span></p>
+      <p>생성자: <span id="modal-creator">-</span></p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="saveModal()" class="flex-1 bg-teal-600 text-white py-2 rounded font-semibold hover:bg-teal-700">저장</button>
+      <button onclick="deleteTask()" class="px-4 py-2 border border-red-300 text-red-500 rounded hover:bg-red-50">🗑 삭제</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/kanban.js"></script>
+</body>
+</html>
